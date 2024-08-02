@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-User Chat Room</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        #nickname-form, #chat-container, #private-chat { display: flex; flex-direction: column; height: 100vh; }
+        #nickname-form { justify-content: center; align-items: center; }
+        #chat-container { display: none; flex-direction: row; }
+        #chat-box { flex: 1; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9; }
+        #user-list { width: 250px; border-left: 1px solid #ccc; padding: 10px; background-color: #e9e9e9; }
+        #message-form { display: flex; margin: 10px 0; }
+        #message-input { flex: 1; padding: 5px; }
+        #file-input { display: none; }
+        #upload-button { margin-left: 10px; }
+        #close-room { margin: 10px 0; padding: 5px 10px; background-color: #f44; color: #fff; border: none; cursor: pointer; }
+        #search-input { width: calc(100% - 30px); padding: 5px; margin-bottom: 10px; }
+        #search-button { padding: 5px 10px; }
+        .user-item { margin-bottom: 10px; cursor: pointer; }
+        .message { margin-bottom: 10px; }
+        .user { font-weight: bold; }
+        .image, .video { max-width: 200px; display: block; margin-top: 5px; }
+        .join-left { color: #888; font-style: italic; }
+        #nickname-input { margin-bottom: 10px; padding: 5px; }
+        #nickname-submit { padding: 5px 10px; }
+        #private-chat { display: none; position: fixed; right: 0; bottom: 0; border: 1px solid #ccc; padding: 10px; background-color: #fff; width: 300px; height: 300px; }
+        #private-chat-box { overflow-y: scroll; height: calc(100% - 50px); border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9; }
+        #private-message-form { display: flex; margin-top: 10px; }
+        #private-message-input { flex: 1; padding: 5px; }
+    </style>
+</head>
+<body>
+    <!-- Nickname form -->
+    <div id="nickname-form">
+        <input type="text" id="nickname-input" placeholder="Enter your nickname" required>
+        <button id="nickname-submit">Join Chat</button>
+    </div>
+
+    <!-- Chat container -->
+    <div id="chat-container">
+        <div id="chat-box"></div>
+        <div id="user-list">
+            <input type="text" id="search-input" placeholder="Search users">
+            <button id="search-button">Search</button>
+            <div id="users"></div>
+        </div>
+    </div>
+
+    <!-- Message form -->
+    <form id="message-form">
+        <input type="text" id="message-input" placeholder="Type a message">
+        <input type="file" id="file-input" accept="image/*,video/*">
+        <button type="button" id="upload-button">Upload</button>
+        <button type="submit">Send</button>
+    </form>
+    <button id="close-room">Close Room</button>
+
+    <!-- Private Chat -->
+    <div id="private-chat">
+        <div id="private-chat-box"></div>
+        <form id="private-message-form">
+            <input type="text" id="private-message-input" placeholder="Type a private message">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <script>
+        const nicknameForm = document.getElementById('nickname-form');
+        const chatContainer = document.getElementById('chat-container');
+        const nicknameInput = document.getElementById('nickname-input');
+        const nicknameSubmit = document.getElementById('nickname-submit');
+        const chatBox = document.getElementById('chat-box');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const fileInput = document.getElementById('file-input');
+        const uploadButton = document.getElementById('upload-button');
+        const closeRoomButton = document.getElementById('close-room');
+        const usersList = document.getElementById('users');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const privateChat = document.getElementById('private-chat');
+        const privateChatBox = document.getElementById('private-chat-box');
+        const privateMessageForm = document.getElementById('private-message-form');
+        const privateMessageInput = document.getElementById('private-message-input');
+
+        let currentUser = '';
+        const users = new Map(); // Store user nicknames
+        const privateChats = new Map(); // Store private chat messages
+
+        function updateUserList() {
+            usersList.innerHTML = '';
+            users.forEach((_, user) => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                userDiv.textContent = user;
+                userDiv.addEventListener('dblclick', () => openPrivateChat(user));
+                usersList.appendChild(userDiv);
+            });
+        }
+
+        function displayMessage(user, message, type, url) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            if (type === 'text') {
+                messageDiv.innerHTML = `<span class="user">${user}:</span> ${message}`;
+            } else if (type === 'image') {
+                messageDiv.innerHTML = `<span class="user">${user}:</span><br><img src="${url}" class="image">`;
+            } else if (type === 'video') {
+                messageDiv.innerHTML = `<span class="user">${user}:</span><br><video class="video" controls src="${url}"></video>`;
+            } else if (type === 'join') {
+                messageDiv.className = 'message join-left';
+                messageDiv.textContent = `${user} has joined the chat.`;
+            } else if (type === 'left') {
+                messageDiv.className = 'message join-left';
+                messageDiv.textContent = `${user} has left the chat.`;
+            }
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function openPrivateChat(user) {
+            if (user !== currentUser) {
+                privateChat.style.display = 'flex';
+                privateChat.dataset.user = user;
+                privateChatBox.innerHTML = ''; // Clear previous messages
+            }
+        }
+
+        function sendMessageToPrivateChat(user, message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = `<span class="user">${currentUser} (private):</span> ${message}`;
+            privateChatBox.appendChild(messageDiv);
+            privateChatBox.scrollTop = privateChatBox.scrollHeight;
+        }
+
+        nicknameSubmit.addEventListener('click', () => {
+            const nickname = nicknameInput.value.trim();
+            if (nickname && !users.has(nickname)) {
+                currentUser = nickname;
+                users.set(currentUser, []);
+                localStorage.setItem('nickname', currentUser);
+                nicknameForm.style.display = 'none';
+                chatContainer.style.display = 'flex';
+                displayMessage('', 'Welcome to the Chat Room!', 'text');
+                displayMessage(currentUser, '', 'join');
+                updateUserList();
+            } else if (users.has(nickname)) {
+                alert('Nickname already taken. Please choose another one.');
+            } else {
+                alert('Please enter a nickname.');
+            }
+        });
+
+        messageForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                displayMessage(currentUser, message, 'text');
+                messageInput.value = '';
+            }
+        });
+
+        uploadButton.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const fileURL = e.target.result;
+                    if (file.type.startsWith('image/')) {
+                        displayMessage(currentUser, '', 'image', fileURL);
+                    } else if (file.type.startsWith('video/')) {
+                        displayMessage(currentUser, '', 'video', fileURL);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        closeRoomButton.addEventListener('click', () => {
+            displayMessage(currentUser, '', 'left');
+            users.delete(currentUser);
+            chatContainer.style.display = 'none';
+            nicknameForm.style.display = 'flex';
+            localStorage.removeItem('nickname');
+            currentUser = '';
+            updateUserList();
+        });
+
+        searchButton.addEventListener('click', () => {
+            const query = searchInput.value.toLowerCase();
+            document.querySelectorAll('.user-item').forEach(item => {
+                const username = item.textContent.toLowerCase();
+                item.style.display = username.includes(query) ? 'block' : 'none';
+            });
+        });
+
+        privateMessageForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const message = privateMessageInput.value.trim();
+            const recipient = privateChat.dataset.user;
+            if (message && recipient && recipient !== currentUser) {
+                sendMessageToPrivateChat(recipient, message);
+                privateMessageInput.value = '';
+            }
+        });
+
+        window.addEventListener('load', () => {
+            const storedNickname = localStorage.getItem('nickname');
+            if (storedNickname) {
+                currentUser = storedNickname;
+                users.set(currentUser, []);
+                nicknameForm.style.display = 'none';
+                chatContainer.style.display = 'flex';
+                displayMessage('', 'Welcome back to the Chat Room!', 'text');
+                displayMessage(currentUser, '', 'join');
+                updateUserList();
+            }
+        });
+    </script>
+</body>
+</html>

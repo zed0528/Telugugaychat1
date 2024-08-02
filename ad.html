@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pop-up Ad Upload Example</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Upload Form -->
+    <div class="upload-form">
+        <h2>Upload Ad Content</h2>
+        <form id="upload-form">
+            <label for="ad-file">Select an image, video, or GIF:</label>
+            <input type="file" id="ad-file" accept="image/*,video/*" required>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
+    <!-- Pop-up Ad -->
+    <div id="popup-ad" class="popup-ad" style="display: none;">
+        <!-- Close Button -->
+        <button id="close-btn" class="close-btn" style="display: none;">&times;</button>
+        
+        <!-- Ad Content -->
+        <div id="ad-content" class="ad-content">
+            <!-- Content will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

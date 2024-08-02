@@ -1,0 +1,42 @@
+/* Basic styles for the pop-up ad and upload form */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+.upload-form {
+    padding: 20px;
+}
+
+.popup-ad {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px; /* Adjust size as needed */
+    padding: 10px;
+    background: #fff;
+    border: 2px solid #ccc;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000; /* Ensure it appears above other content */
+}
+
+.ad-content {
+    position: relative;
+}
+
+.ad-image, .ad-video, .ad-gif {
+    width: 100%;
+    height: auto;
+}
+
+.close-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    border: none;
+    background: #f00;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+}
